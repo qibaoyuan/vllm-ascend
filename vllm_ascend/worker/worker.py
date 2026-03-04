@@ -515,8 +515,15 @@ class NPUWorker(WorkerBase):
         if self.profiler is None:
             raise RuntimeError("Profiler is not enabled.")
         if is_start:
-            self.profiler.start()
+            # Recreate the profiler each time to avoid reusing a stopped
+            # torch_npu profiler, which causes rtFlipTask null errors on
+            # repeated start/stop cycles.
+            self.profiler = self._init_profiler()
+            if self.profiler is None:
+                raise RuntimeError("Profiler is not enabled.")
         else:
+            if self.profiler is None:
+                raise RuntimeError("Profiler is not enabled.")
             self.profiler.stop()
 
     def add_lora(self, lora_request: LoRARequest) -> bool:
